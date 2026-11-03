@@ -3,35 +3,426 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cable & Panel Label Wizard — APK.audio</title>
+  <title>Cable Label Wizard · Standalone Block Editor</title>
+  <link rel="stylesheet" href="./css/theme.css">
   <style>
-    body { font-family: -apple-system, sans-serif; background: #0f1218; color: #e2e8f0; margin: 0; padding: 20px; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #283348; padding-bottom: 15px; margin-bottom: 20px; }
-    button { background: #0284c7; color: #fff; border: 1px solid #38bdf8; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-    .sheet-preview { background: #f8fafc; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; margin-top: 15px; }
+    /* Wizard specific styling */
+    .wizard-container {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      grid-template-rows: 1fr 240px;
+      height: calc(100vh - 42px);
+      overflow: hidden;
+    }
+
+    .wizard-sidebar {
+      grid-column: 1;
+      grid-row: 1;
+      border-right: 1px solid var(--osc-border-default);
+      background: var(--osc-bg-surface);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .step-nav {
+      display: flex;
+      border-bottom: 1px solid var(--osc-border-default);
+      background: var(--osc-bg-base);
+    }
+
+    .step-nav-btn {
+      flex: 1;
+      padding: 8px 4px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--osc-text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .step-nav-btn.active {
+      color: var(--osc-accent-primary);
+      border-bottom-color: var(--osc-accent-primary);
+      background: var(--osc-bg-surface);
+    }
+
+    .step-pane {
+      display: none;
+      padding: 14px;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .step-pane.active {
+      display: flex;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--osc-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .token-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .token-pill {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--osc-bg-input);
+      border: 1px solid var(--osc-border-default);
+      color: var(--osc-text-primary);
+      cursor: pointer;
+    }
+
+    .token-pill:hover {
+      border-color: var(--osc-accent-primary);
+      color: var(--osc-accent-primary);
+    }
+
+    .preview-panel {
+      grid-column: 2;
+      grid-row: 1;
+      background: var(--osc-bg-base);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .preview-header {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--osc-border-default);
+      background: var(--osc-bg-surface);
+    }
+
+    .preview-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: auto;
+      background: radial-gradient(circle at 50% 50%, #151F38 0%, #080C16 100%);
+    }
+
+    .preview-stage svg {
+      max-height: 100%;
+      max-width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      border-radius: 4px;
+    }
+
+    .data-grid-panel {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      border-top: 1px solid var(--osc-border-default);
+      background: var(--osc-bg-surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .data-grid-header {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--osc-border-default);
+      background: var(--osc-bg-surface-hover);
+    }
+
+    .data-table-container {
+      flex: 1;
+      overflow: auto;
+    }
+
+    table.cable-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    table.cable-table th {
+      position: sticky;
+      top: 0;
+      background: var(--osc-bg-input);
+      color: var(--osc-text-muted);
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--osc-border-default);
+      font-weight: 600;
+      z-index: 2;
+    }
+
+    table.cable-table td {
+      padding: 2px 4px;
+      border-bottom: 1px solid var(--osc-border-default);
+    }
+
+    .cell-input {
+      width: 100%;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--osc-text-primary);
+      padding: 4px 6px;
+      font-size: 11px;
+      border-radius: 2px;
+      font-family: inherit;
+    }
+
+    .cell-input:focus {
+      background: var(--osc-bg-input);
+      border-color: var(--osc-accent-primary);
+      outline: none;
+    }
+
+    .col-idx {
+      width: 35px;
+      text-align: center;
+      color: var(--osc-text-muted);
+    }
+
+    .col-actions {
+      width: 45px;
+      text-align: center;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--osc-text-muted);
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+
+    .btn-icon:hover {
+      background: var(--osc-status-danger);
+      color: #fff;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .preview-stage, .preview-stage * {
+        visibility: visible;
+      }
+      .preview-stage {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        background: white;
+      }
+      .preview-stage svg {
+        box-shadow: none;
+      }
+    }
   </style>
 </head>
-<body>
-  <header>
-    <h2>🏷️ Cable & Panel Label Wizard</h2>
-    <button onclick="window.print()">Print Sheet (Avery 5160)</button>
+<body class="theme-deep-horizon">
+  <!-- Top Editor Lifecycle Window Bar -->
+  <header class="app-window-header">
+    <div class="window-title-group">
+      <span class="window-dot"></span>
+      <span class="window-title">Cable Label Wizard</span>
+      <span class="window-pill" id="block-tag">STANDALONE BLOCK EDITOR</span>
+      <span class="window-pill" id="label-count-pill">0 Runs · 0 Labels</span>
+    </div>
+    <div class="window-actions">
+      <button class="btn btn-secondary" id="btn-sync-discovered" title="Load live cable runs from Discovered Project">
+        <span class="btn-icon">⚡</span> Discovered
+      </button>
+      <button class="btn btn-secondary" id="btn-open" title="Open block JSON">
+        <span class="btn-icon">📂</span> Open
+      </button>
+      <button class="btn btn-primary" id="btn-save" title="Save & Return modified block to caller">
+        <span class="btn-icon">💾</span> Save & Return
+      </button>
+      <button class="btn btn-icon" id="btn-close" title="Close Editor">✕</button>
+    </div>
   </header>
 
-  <p style="color:#94a3b8; font-size:14px;">Print-ready self-laminating cable wrap preview:</p>
-  <div class="sheet-preview" id="preview"></div>
+  <div class="wizard-container">
+    <!-- Wizard Step Sidebar -->
+    <aside class="wizard-sidebar">
+      <nav class="step-nav">
+        <button class="step-nav-btn active" id="tab-step1">1. Stock</button>
+        <button class="step-nav-btn" id="tab-step2">2. Templates</button>
+        <button class="step-nav-btn" id="tab-step3">3. Format</button>
+      </nav>
 
-  <script type="module">
-    import { generateCableLabel, formatAverySheetHtml } from './js/labels.js';
+      <!-- Step 1: Stock & Sheet -->
+      <section class="step-pane active" id="pane-step1">
+        <div class="form-group">
+          <label for="select-stock">Label Stock</label>
+          <select id="select-stock" class="input"></select>
+        </div>
+        <div class="form-group">
+          <label for="input-start-offset">Start at Cell # (Offset)</label>
+          <input type="number" id="input-start-offset" class="input" min="0" value="0">
+          <span style="font-size:10px; color:var(--osc-text-muted);">Skip cells on part-used sheet</span>
+        </div>
+        <div class="form-group">
+          <label for="select-theme">Preview Theme</label>
+          <select id="select-theme" class="input">
+            <option value="dark">Deep Horizon (Dark)</option>
+            <option value="light">Print Paper (Light)</option>
+          </select>
+        </div>
+      </section>
 
-    const sampleCables = [
-      { wireNumber: 'W-AUD-0101', srcDevice: 'STAGEBOX-A', srcPort: 'XLR-01', dstDevice: 'CONSOLE', dstPort: 'CH-01', signalType: 'MIC-LEVEL' },
-      { wireNumber: 'W-AUD-0102', srcDevice: 'STAGEBOX-A', srcPort: 'XLR-02', dstDevice: 'CONSOLE', dstPort: 'CH-02', signalType: 'MIC-LEVEL' },
-      { wireNumber: 'W-AUD-0103', srcDevice: 'CONSOLE', srcPort: 'MAIN-L', dstDevice: 'AMP-RACK', dstPort: 'CH-A', signalType: 'LINE-LEVEL' },
-      { wireNumber: 'W-NET-0201', srcDevice: 'CORE-SW', srcPort: 'GE-0/1', dstDevice: 'DANTE-DSP', dstPort: 'PRI', signalType: 'CAT6A-DANTE' }
-    ];
+      <!-- Step 2: Row Templates -->
+      <section class="step-pane" id="pane-step2">
+        <div class="form-group">
+          <label for="input-row1">Row 1 (Top)</label>
+          <input type="text" id="input-row1" class="input" value="{wireNumber}">
+          <select id="select-preset1" class="input" style="margin-top:2px; font-size:11px;"></select>
+        </div>
+        <div class="form-group">
+          <label for="input-row2">Row 2 (Middle)</label>
+          <input type="text" id="input-row2" class="input" value="{source} / {sourceConnector}">
+          <select id="select-preset2" class="input" style="margin-top:2px; font-size:11px;"></select>
+        </div>
+        <div class="form-group">
+          <label for="input-row3">Row 3 (Bottom)</label>
+          <input type="text" id="input-row3" class="input" value="{destination} / {destConnector}">
+          <select id="select-preset3" class="input" style="margin-top:2px; font-size:11px;"></select>
+        </div>
+        <div class="form-group">
+          <label>Insert Token</label>
+          <div class="token-pills">
+            <button type="button" class="token-pill" data-token="wireNumber">{wireNumber}</button>
+            <button type="button" class="token-pill" data-token="source">{source}</button>
+            <button type="button" class="token-pill" data-token="destination">{destination}</button>
+            <button type="button" class="token-pill" data-token="sourceConnector">{sourceConnector}</button>
+            <button type="button" class="token-pill" data-token="destConnector">{destConnector}</button>
+            <button type="button" class="token-pill" data-token="wireType">{wireType}</button>
+            <button type="button" class="token-pill" data-token="sourceRoom">{sourceRoom}</button>
+            <button type="button" class="token-pill" data-token="destinationRoom">{destinationRoom}</button>
+            <button type="button" class="token-pill" data-token="code">{code}</button>
+          </div>
+        </div>
+      </section>
 
-    const labels = sampleCables.map(generateCableLabel);
-    document.getElementById('preview').innerHTML = formatAverySheetHtml(labels);
-  </script>
+      <!-- Step 3: Format & Scope -->
+      <section class="step-pane" id="pane-step3">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-both-ends" checked>
+            <span>Both Ends (2 labels per run)</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label for="select-end-marker">End Marker Style</label>
+          <select id="select-end-marker" class="input">
+            <option value="none">None (Identical tags)</option>
+            <option value="ab" selected>(A) / (B) suffix</option>
+            <option value="srcdest">[SRC] / [DEST] suffix</option>
+            <option value="swap">Swap middle & bottom on END B</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-all-caps" checked>
+            <span>Force ALL CAPS</span>
+          </label>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Center/Right: Live Sheet SVG Preview -->
+    <main class="preview-panel">
+      <div class="preview-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-secondary btn-sm" id="btn-prev-page">◀ Prev Sheet</button>
+          <span id="page-indicator" style="font-size:12px; font-weight:600; color:var(--osc-text-primary);">Sheet 1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="btn-next-page">Next Sheet ▶</button>
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" id="btn-print">
+            <span class="btn-icon">🖨</span> Print 1:1 Scale
+          </button>
+        </div>
+      </div>
+      <div class="preview-stage" id="sheet-preview-container">
+        <!-- SVG sheet rendered dynamically -->
+      </div>
+    </main>
+
+    <!-- Bottom: Editable Cable Data Grid -->
+    <section class="data-grid-panel">
+      <div class="data-grid-header">
+        <span style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--osc-text-muted);">
+          Cable Runs Data Grid (Live Editable)
+        </span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="file" id="file-import-csv" accept=".csv" style="display:none;">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('file-import-csv').click();">Import CSV</button>
+          <button class="btn btn-secondary btn-sm" id="btn-export-csv">Export CSV</button>
+          <button class="btn btn-primary btn-sm" id="btn-add-row">+ Add Cable</button>
+        </div>
+      </div>
+      <div class="data-table-container">
+        <table class="cable-table">
+          <thead>
+            <tr>
+              <th class="col-idx">#</th>
+              <th>Cable #</th>
+              <th>Source Device</th>
+              <th>Src Conn</th>
+              <th>Destination Device</th>
+              <th>Dest Conn</th>
+              <th>Type</th>
+              <th>Src Room</th>
+              <th>Dest Room</th>
+              <th class="col-actions">Act</th>
+            </tr>
+          </thead>
+          <tbody id="cable-table-body">
+            <!-- Table rows dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./js/cableWizardApp.js"></script>
 </body>
 </html>
