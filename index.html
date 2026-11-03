@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cable & Panel Label Wizard — APK.audio</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #0f1218; color: #e2e8f0; margin: 0; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #283348; padding-bottom: 15px; margin-bottom: 20px; }
+    button { background: #0284c7; color: #fff; border: 1px solid #38bdf8; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+    .sheet-preview { background: #f8fafc; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🏷️ Cable & Panel Label Wizard</h2>
+    <button onclick="window.print()">Print Sheet (Avery 5160)</button>
+  </header>
+
+  <p style="color:#94a3b8; font-size:14px;">Print-ready self-laminating cable wrap preview:</p>
+  <div class="sheet-preview" id="preview"></div>
+
+  <script type="module">
+    import { generateCableLabel, formatAverySheetHtml } from './js/labels.js';
+
+    const sampleCables = [
+      { wireNumber: 'W-AUD-0101', srcDevice: 'STAGEBOX-A', srcPort: 'XLR-01', dstDevice: 'CONSOLE', dstPort: 'CH-01', signalType: 'MIC-LEVEL' },
+      { wireNumber: 'W-AUD-0102', srcDevice: 'STAGEBOX-A', srcPort: 'XLR-02', dstDevice: 'CONSOLE', dstPort: 'CH-02', signalType: 'MIC-LEVEL' },
+      { wireNumber: 'W-AUD-0103', srcDevice: 'CONSOLE', srcPort: 'MAIN-L', dstDevice: 'AMP-RACK', dstPort: 'CH-A', signalType: 'LINE-LEVEL' },
+      { wireNumber: 'W-NET-0201', srcDevice: 'CORE-SW', srcPort: 'GE-0/1', dstDevice: 'DANTE-DSP', dstPort: 'PRI', signalType: 'CAT6A-DANTE' }
+    ];
+
+    const labels = sampleCables.map(generateCableLabel);
+    document.getElementById('preview').innerHTML = formatAverySheetHtml(labels);
+  </script>
+</body>
+</html>

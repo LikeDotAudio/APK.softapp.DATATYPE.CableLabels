@@ -1,0 +1,9 @@
+{
+  "name": "Cable & Panel Label Wizard",
+  "icon": "🏷️",
+  "group": "Pipeline",
+  "subGroup": "Translators & Formats",
+  "stage": "07c",
+  "description": "Cable & Panel Label Wizard: formats signal cable tags (source, destination, signal type, wire number) and patch panel designation strips for Avery label sheets, Brother P-Touch printers, and Brady thermal stock.",
+  "app": "APK:Softapps/DATATYPE/DATATYPE.CableLabels/index.html"
+}
