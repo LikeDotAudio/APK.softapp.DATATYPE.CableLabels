@@ -49,13 +49,13 @@ export function buildSheetSvg(page, stock, options = {}) {
   } = options;
 
   const isDark = theme === 'dark';
-  const paper = isDark ? '#080C16' : '#ffffff';
-  const edge = isDark ? '#1E2A45' : '#c8ced6';
-  const dieLine = isDark ? '#2D3D60' : '#aab3bd';
-  const flag = isDark ? '#121A2F' : '#fdfdfd';
-  const tailWash = isDark ? '#0E1424' : '#f0f3f8';
-  const ink = isDark ? '#F0F4F8' : '#080C16';
-  const faint = isDark ? '#8B9BB4' : '#6b7a90';
+  const paper = isDark ? '#121212' : '#ffffff';
+  const edge = isDark ? '#2c2c2c' : '#c8ced6';
+  const dieLine = isDark ? '#3f3f46' : '#aab3bd';
+  const flag = isDark ? '#18181b' : '#fdfdfd';
+  const tailWash = isDark ? '#0f0f11' : '#f0f3f8';
+  const ink = isDark ? '#f4f4f5' : '#121212';
+  const faint = isDark ? '#888888' : '#6b7a90';
   const accent = isDark ? '#F4902C' : '#D06000';
 
   const parts = [];

@@ -1,305 +1,184 @@
-/* OneThing / APK.audio Deep Horizon Environment Theme */
+/* Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub */
+/* MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root. */
+/* APK.audio Environment & OS Design Theme Tokens */
+
 :root {
-  --osc-bg-base: #080C16;
-  --osc-bg-surface: #121A2F;
-  --osc-bg-surface-hover: #1E2A45;
-  --osc-bg-input: #0E1424;
-  --osc-accent-primary: #F4902C;
-  --osc-accent-primary-hover: #FFA040;
-  --osc-accent-secondary: #2B5876;
-  --osc-border-default: #1E2A45;
-  --osc-border-muted: #121A2F;
-  --osc-border-accent: #F4902C;
-  --osc-text-primary: #F0F4F8;
-  --osc-text-muted: #8B9BB4;
-  --osc-text-faint: #5A6A82;
-  --osc-text-inverse: #0B132B;
-  --osc-status-success: #3FB68C;
-  --osc-status-warning: #E89A4A;
-  --osc-status-danger: #E85A5A;
-  --osc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --osc-font-mono: 'JetBrains Mono', Consolas, Monaco, monospace;
+  /* Site & OS Contract Tokens */
+  --apk-accent: #f4902c;
+  --apk-accent-hover: #ffa552;
+  --apk-on-accent: #111111;
+  --apk-state-good: #2ea043;
+  --apk-state-dead: #f85149;
+  --apk-state-kinda: #d29922;
+
+  /* Shell / OS Ground & Panel Tokens (Matching APK.audio OS theme.css) */
+  --bg-dark: #121212;
+  --bg-panel: #18181b;
+  --bg-surface: #18181b;
+  --bg-surface-hover: #222226;
+  --bg-window: #000000;
+  --bg-input: #0f0f11;
+  --border-color: #2c2c2c;
+  --border-light: #3f3f46;
+  --text-main: #f4f4f5;
+  --text-muted: #888888;
+  --text-subtle: #52525b;
+
+  /* Mapped Softapp & Buddy Variables */
+  --osc-bg-base: var(--bg-dark, #121212);
+  --osc-bg-surface: var(--bg-panel, #18181b);
+  --osc-bg-surface-hover: var(--bg-surface-hover, #222226);
+  --osc-bg-input: var(--bg-input, #0f0f11);
+  --osc-border-default: var(--border-color, #2c2c2c);
+  --osc-border-light: var(--border-light, #3f3f46);
+  --osc-border-muted: #242428;
+  --osc-accent-primary: var(--accent, var(--apk-accent, #f4902c));
+  --osc-accent-secondary: #38bdf8;
+  --osc-text-primary: var(--text-main, #f4f4f5);
+  --osc-text-muted: var(--text-muted, #888888);
+  --osc-text-subtle: var(--text-subtle, #52525b);
+  --osc-status-danger: var(--apk-state-dead, #ef4444);
+  --osc-status-success: var(--apk-state-good, #22c55e);
+  --osc-status-warning: var(--apk-state-kinda, #f59e0b);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-* { box-sizing: border-box; }
-
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
   background: var(--osc-bg-base);
   color: var(--osc-text-primary);
-  font-family: var(--osc-font-sans);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
-/* Window Chrome Header */
-header.app-header {
-  height: 44px;
+.app-window-header {
+  height: 36px;
   background: var(--osc-bg-surface);
   border-bottom: 1px solid var(--osc-border-default);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  flex-shrink: 0;
+  padding: 0 12px;
   user-select: none;
 }
 
-.brand-area {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-icon {
-  font-size: 18px;
-}
-
-.brand-title {
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
-
-.brand-badge {
-  font-size: 11px;
-  background: rgba(244, 144, 44, 0.15);
-  color: var(--osc-accent-primary);
-  border: 1px solid rgba(244, 144, 44, 0.35);
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-family: var(--osc-font-mono);
-}
-
-.block-title-tag {
-  font-size: 11px;
-  color: var(--osc-text-muted);
-  background: var(--osc-bg-input);
-  border: 1px solid var(--osc-border-default);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.header-actions {
+.window-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-button.btn {
-  background: var(--osc-bg-surface-hover);
-  border: 1px solid var(--osc-border-default);
-  color: var(--osc-text-primary);
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+.window-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--osc-accent-primary);
+  box-shadow: 0 0 8px rgba(244, 144, 44, 0.4);
+}
+
+.window-title {
   font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--osc-text-primary);
+}
+
+.window-pill {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--osc-bg-input);
+  border: 1px solid var(--osc-border-default);
+  color: var(--osc-accent-primary);
+}
+
+.window-actions {
+  display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
 }
 
-button.btn:hover {
-  background: #253352;
-  border-color: #3b4e75;
-  color: #fff;
-}
-
-button.btn.btn-primary {
-  background: var(--osc-accent-primary);
-  border-color: var(--osc-accent-primary);
-  color: #000;
-  font-weight: 700;
-}
-
-button.btn.btn-primary:hover {
-  background: var(--osc-accent-primary-hover);
-  border-color: var(--osc-accent-primary-hover);
-}
-
-button.btn.btn-close {
-  background: transparent;
-  border-color: transparent;
-  color: var(--osc-text-muted);
-  font-size: 14px;
-  padding: 6px 8px;
-}
-
-button.btn.btn-close:hover {
-  background: rgba(232, 90, 90, 0.2);
-  color: var(--osc-status-danger);
-  border-color: rgba(232, 90, 90, 0.4);
-}
-
-/* Main workspace */
-.workspace {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  height: calc(100vh - 44px - 28px);
-  overflow: hidden;
-}
-
-/* Sidebar & Steps */
-.sidebar {
-  background: var(--osc-bg-surface);
-  border-right: 1px solid var(--osc-border-default);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.step-nav {
-  display: flex;
-  border-bottom: 1px solid var(--osc-border-default);
-  background: var(--osc-bg-base);
-}
-
-.step-tab {
-  flex: 1;
-  padding: 10px 8px;
-  text-align: center;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--osc-text-muted);
+  border-radius: 4px;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
-}
-
-.step-tab:hover {
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  font-family: inherit;
   color: var(--osc-text-primary);
 }
 
-.step-tab.active {
-  color: var(--osc-accent-primary);
-  border-bottom-color: var(--osc-accent-primary);
-  background: var(--osc-bg-surface);
-}
-
-.step-content {
-  padding: 16px;
-  flex: 1;
-}
-
-.section-title {
-  font-size: 11px;
+.btn-primary {
+  background: var(--osc-accent-primary);
+  color: #111111;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--osc-accent-primary);
-  margin: 16px 0 8px 0;
 }
 
-.section-title:first-child {
-  margin-top: 0;
+.btn-primary:hover {
+  background: var(--apk-accent-hover, #ffa552);
+  color: #000000;
 }
 
-.form-group {
-  margin-bottom: 14px;
+.btn-secondary {
+  background: var(--osc-bg-surface-hover);
+  border-color: var(--osc-border-default);
+  color: var(--osc-text-primary);
 }
 
-.form-group label {
-  display: block;
-  font-size: 11px;
+.btn-secondary:hover {
+  background: #2c2c32;
+  border-color: var(--osc-border-light);
+}
+
+.btn-sm {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.btn-icon {
+  padding: 4px 7px;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--osc-text-muted);
-  margin-bottom: 5px;
 }
 
-input[type="text"], input[type="number"], select, textarea {
+.btn-icon:hover {
+  color: #ffffff;
+  background: var(--osc-bg-surface-hover);
+}
+
+.input {
   width: 100%;
+  padding: 5px 8px;
   background: var(--osc-bg-input);
   border: 1px solid var(--osc-border-default);
   border-radius: 4px;
   color: var(--osc-text-primary);
-  padding: 7px 10px;
   font-size: 12px;
   font-family: inherit;
+}
+
+.input:focus {
   outline: none;
-  transition: border-color 0.15s;
-}
-
-input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
   border-color: var(--osc-accent-primary);
-}
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-  font-size: 12px;
-  color: var(--osc-text-primary);
-  margin: 8px 0;
-}
-
-/* Stage / Preview Area */
-.preview-stage {
-  background: #05080f;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-.stage-toolbar {
-  height: 38px;
-  background: var(--osc-bg-surface);
-  border-bottom: 1px solid var(--osc-border-default);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-}
-
-.stage-viewport {
-  flex: 1;
-  overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 30px;
-  position: relative;
-}
-
-.sheet-container {
-  background: #ffffff;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
-  transition: transform 0.1s ease-out;
-  transform-origin: center center;
-}
-
-/* Footer Status Bar */
-footer.app-footer {
-  height: 28px;
-  background: var(--osc-bg-surface);
-  border-top: 1px solid var(--osc-border-default);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  font-size: 11px;
-  color: var(--osc-text-muted);
-  user-select: none;
-}
-
-.footer-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.footer-pill span.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--osc-status-success);
 }
