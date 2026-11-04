@@ -161,56 +161,7 @@
       overflow: auto;
     }
 
-    table.cable-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-    }
-
-    table.cable-table th {
-      position: sticky;
-      top: 0;
-      background: var(--osc-bg-input);
-      color: var(--osc-text-muted);
-      padding: 6px 8px;
-      text-align: left;
-      border-bottom: 1px solid var(--osc-border-default);
-      font-weight: 600;
-      z-index: 2;
-    }
-
-    table.cable-table td {
-      padding: 2px 4px;
-      border-bottom: 1px solid var(--osc-border-default);
-    }
-
-    .cell-input {
-      width: 100%;
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--osc-text-primary);
-      padding: 4px 6px;
-      font-size: 11px;
-      border-radius: 2px;
-      font-family: inherit;
-    }
-
-    .cell-input:focus {
-      background: var(--osc-bg-input);
-      border-color: var(--osc-accent-primary);
-      outline: none;
-    }
-
-    .col-idx {
-      width: 35px;
-      text-align: center;
-      color: var(--osc-text-muted);
-    }
-
-    .col-actions {
-      width: 45px;
-      text-align: center;
-    }
+    .apk-table-host { display: flex; min-height: 0; height: 100%; }
 
     .btn-icon {
       background: none;
@@ -256,6 +207,9 @@
       }
     }
   </style>
+  <!-- THE ONE TABLE (FrontEnd/shared/apk-table.*, vendored; check.sh webshared) -->
+  <link rel="stylesheet" href="./vendor/apk-table/apk-table.css">
+  <script src="./vendor/apk-table/apk-table.js"></script>
 </head>
 <body class="apk-softapp-env">
   <!-- Top Editor Lifecycle Window Bar -->
@@ -401,25 +355,7 @@
         </div>
       </div>
       <div class="data-table-container">
-        <table class="cable-table">
-          <thead>
-            <tr>
-              <th class="col-idx">#</th>
-              <th>Cable #</th>
-              <th>Source Device</th>
-              <th>Src Conn</th>
-              <th>Destination Device</th>
-              <th>Dest Conn</th>
-              <th>Type</th>
-              <th>Src Room</th>
-              <th>Dest Room</th>
-              <th class="col-actions">Act</th>
-            </tr>
-          </thead>
-          <tbody id="cable-table-body">
-            <!-- Table rows dynamically populated -->
-          </tbody>
-        </table>
+        <div id="cable-table" class="apk-table-host"></div>
       </div>
     </section>
   </div>

@@ -2,6 +2,7 @@
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
 import { BlockBridge } from './blockBridge.js';
+import { cableTable } from './cableTable.js';
 import { LABEL_STOCKS, getStock, DEFAULT_STOCK_ID } from './labelStock.js';
 import { FIELD_TOKENS, ROW_PRESETS, DEFAULT_ROW_TEMPLATES } from './labelFields.js';
 import { layoutSheets } from './labelLayout.js';
@@ -66,7 +67,7 @@ export class CableWizardApp {
     this.chkAllCaps = document.getElementById('chk-all-caps');
 
     // Step 3 / Data
-    this.tableBody = document.getElementById('cable-table-body');
+    this.tableHost = document.getElementById('cable-table');
     this.btnAddRow = document.getElementById('btn-add-row');
     this.btnExportCsv = document.getElementById('btn-export-csv');
     this.fileImportCsv = document.getElementById('file-import-csv');
@@ -315,46 +316,10 @@ export class CableWizardApp {
   }
 
   renderTable() {
-    if (!this.tableBody) return;
-    this.tableBody.innerHTML = '';
-
-    this.runs.forEach((run, idx) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="col-idx">${idx + 1}</td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="wireNumber" value="${run.wireNumber || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="source" value="${run.source || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="sourceConnector" value="${run.sourceConnector || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="destination" value="${run.destination || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="destConnector" value="${run.destConnector || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="wireType" value="${run.wireType || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="sourceRoom" value="${run.sourceRoom || ''}"></td>
-        <td><input type="text" class="cell-input" data-idx="${idx}" data-field="destinationRoom" value="${run.destinationRoom || ''}"></td>
-        <td class="col-actions">
-          <button class="btn-icon btn-del-row" data-idx="${idx}" title="Delete Cable">🗑</button>
-        </td>
-      `;
-      this.tableBody.appendChild(tr);
-    });
-
-    // Attach inline edit handlers
-    this.tableBody.querySelectorAll('.cell-input').forEach(input => {
-      input.addEventListener('input', (e) => {
-        const i = parseInt(e.target.dataset.idx, 10);
-        const f = e.target.dataset.field;
-        this.runs[i][f] = e.target.value;
-        this.renderPreviewOnly();
-        this.bridge.notifyChanged();
-      });
-    });
-
-    this.tableBody.querySelectorAll('.btn-del-row').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const i = parseInt(e.target.dataset.idx, 10);
-        this.runs.splice(i, 1);
-        this.render();
-        this.bridge.notifyChanged();
-      });
+    if (!this.tableHost) return;
+    cableTable(this.tableHost, this.runs, {
+      onEdit: () => { this.renderPreviewOnly(); this.bridge.notifyChanged(); },
+      onDelete: (i) => { this.runs.splice(i, 1); this.render(); this.bridge.notifyChanged(); },
     });
   }
 
