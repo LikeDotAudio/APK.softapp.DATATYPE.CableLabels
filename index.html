@@ -206,6 +206,14 @@
         box-shadow: none;
       }
     }
+    .discovered-panel {
+      background: var(--osc-bg-surface);
+      border-bottom: 1px solid var(--osc-border-default);
+      padding: 8px 14px;
+      max-height: 40vh;
+      overflow: auto;
+    }
+    .discovered-status { font-size: 11px; margin-bottom: 6px; }
   </style>
   <!-- THE ONE TABLE (FrontEnd/shared/apk-table.*, vendored; check.sh webshared) -->
   <link rel="stylesheet" href="./vendor/apk-table/apk-table.css">
@@ -221,7 +229,7 @@
       <span class="window-pill" id="label-count-pill">0 Runs · 0 Labels</span>
     </div>
     <div class="window-actions">
-      <button class="btn btn-secondary" id="btn-sync-discovered" title="Load live cable runs from Discovered Project">
+      <button class="btn btn-secondary" id="btn-sync-discovered" title="What the bus knows: start a cable run from a discovered device">
         <span class="btn-icon">⚡</span> Discovered
       </button>
       <button class="btn btn-secondary" id="btn-open" title="Open block JSON">
@@ -233,6 +241,11 @@
       <button class="btn btn-icon" id="btn-close" title="Close Editor">✕</button>
     </div>
   </header>
+
+  <section class="discovered-panel" id="discovered-panel" hidden>
+    <div class="discovered-status apk-state-text" id="discovered-status" data-apk-state="kinda">Not asked yet.</div>
+    <div id="discovered-table" class="apk-table-host"></div>
+  </section>
 
   <div class="wizard-container">
     <!-- Wizard Step Sidebar -->
@@ -360,6 +373,10 @@
     </section>
   </div>
 
+  <!-- The one softapp client (ROAD-3485): contracts, bus, CAD bridge. Classic scripts, before the module. -->
+  <script src="./vendor/apk-contracts/apk-contracts.global.js"></script>
+  <script src="/FrontEnd/shared/apk-bus.js"></script>
+  <script src="./vendor/apk-softapp/apk-softapp.js"></script>
   <script type="module" src="./js/cableWizardApp.js"></script>
 </body>
 </html>

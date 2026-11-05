@@ -1,7 +1,8 @@
 // Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
-import { BlockBridge } from './blockBridge.js';
+import { connectCableHost, toBlock, blockMeta, fromBlock, normalizeRuns, runFromThing } from './cableHost.js';
+import { showDiscovered, loadDiscoveredConfig } from './discoveredPanel.js';
 import { cableTable } from './cableTable.js';
 import { LABEL_STOCKS, getStock, DEFAULT_STOCK_ID } from './labelStock.js';
 import { FIELD_TOKENS, ROW_PRESETS, DEFAULT_ROW_TEMPLATES } from './labelFields.js';
@@ -23,16 +24,21 @@ export class CableWizardApp {
     this.previewTheme = 'dark';
     this.measurer = makeCanvasMeasurer();
 
-    this.bridge = new BlockBridge({
-      name: 'Cable Label Wizard',
-      type: 'cable_labels',
-      onBlockLoaded: (block, meta) => this.handleBlockLoaded(block, meta),
-      onBlockChanged: () => {},
-    });
-
     this.initElements();
     this.attachEvents();
-    this.loadInitialData();
+    this.loadSampleRuns();
+
+    // The CAD bridge (cad.like.audio/host@1) via the vendored APKSoftapp client. It
+    // says editorReady at once, so the elements above exist before a block arrives.
+    const S = window.APKSoftapp;
+    this.host = S ? connectCableHost(S, {
+      getState: () => ({ stockId: this.stockId, config: this.config, runs: this.runs }),
+      onLoad: (parts, meta) => this.applyBlock(parts, meta),
+    }) : null;
+  }
+
+  changed() {
+    if (this.host) this.host.changed(toBlock({ stockId: this.stockId, config: this.config, runs: this.runs }));
   }
 
   initElements() {
@@ -124,8 +130,8 @@ export class CableWizardApp {
     // Window lifecycle
     this.btnOpen?.addEventListener('click', () => this.promptOpen());
     this.btnSave?.addEventListener('click', () => this.saveBlock());
-    this.btnClose?.addEventListener('click', () => this.bridge.close());
-    this.btnSyncDiscovered?.addEventListener('click', () => this.loadFromDiscoveredProject());
+    this.btnClose?.addEventListener('click', () => { if (this.host) this.host.close(); });
+    this.btnSyncDiscovered?.addEventListener('click', () => this.toggleDiscovered());
 
     // Tabs
     const tabs = [
@@ -225,24 +231,26 @@ export class CableWizardApp {
     this.renderPreviewOnly();
   }
 
-  loadInitialData() {
-    // Attempt loading from discovered project, fallback to default runs
-    this.loadFromDiscoveredProject().catch(() => {
-      this.loadSampleRuns();
-    });
-  }
-
-  async loadFromDiscoveredProject() {
-    try {
-      const data = await this.bridge.fetchDiscoveredProject();
-      if (data && (data.cables || data.wires || data.runs || data.connections)) {
-        const raw = data.cables || data.wires || data.runs || data.connections;
-        this.runs = this.normalizeRuns(raw);
+  /** The Discovered panel: what the bus knows (APKSoftapp.discovered), each one can start a run. */
+  async toggleDiscovered() {
+    const panel = document.getElementById('discovered-panel');
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (panel.hidden || panel.dataset.started) return;
+    panel.dataset.started = '1';
+    const cfg = await loadDiscoveredConfig();
+    await showDiscovered(document.getElementById('discovered-table'), {
+      S: window.APKSoftapp, T: window.APKTable,
+      statusEl: document.getElementById('discovered-status'),
+      kinds: Array.isArray(cfg.kinds) ? cfg.kinds : [],
+      tableId: 'cable-labels-discovered',
+      pickLabel: 'New run from',
+      onPick: (thing) => {
+        this.runs.push(runFromThing(thing, this.runs.length + 1));
         this.render();
-        return;
-      }
-    } catch (_) {}
-    this.loadSampleRuns();
+        this.changed();
+      },
+    });
   }
 
   loadSampleRuns() {
@@ -258,51 +266,36 @@ export class CableWizardApp {
   }
 
   normalizeRuns(rawList) {
-    if (!Array.isArray(rawList)) return [];
-    return rawList.map((item, idx) => ({
-      id: item.id || `cbl_${idx + 1}`,
-      wireNumber: item.wireNumber || item.number || item.label || `CBL-${idx + 1}`,
-      source: item.source || item.fromDevice || item.from || 'SRC',
-      sourceConnector: item.sourceConnector || item.fromPort || '',
-      destination: item.destination || item.toDevice || item.to || 'DEST',
-      destConnector: item.destConnector || item.toPort || '',
-      wireType: item.wireType || item.type || 'SIGNAL',
-      sourceRoom: item.sourceRoom || '',
-      destinationRoom: item.destinationRoom || '',
-      color: item.color || '',
-    }));
+    return normalizeRuns(rawList);
   }
 
   handleBlockLoaded(block, meta) {
-    if (block) {
-      if (Array.isArray(block.runs)) this.runs = block.runs;
-      else if (Array.isArray(block.cables)) this.runs = this.normalizeRuns(block.cables);
-      else if (Array.isArray(block)) this.runs = this.normalizeRuns(block);
+    this.applyBlock(fromBlock(block), meta);
+    this.changed();
+  }
 
-      if (block.stockId) {
-        this.stockId = block.stockId;
-        this.selectStock.value = this.stockId;
-      }
-      if (block.config) {
-        this.config = { ...this.config, ...block.config };
-        this.populateDropdowns();
-      }
-      this.render();
+  /** Apply what a block sets (fromBlock): runs, stock, config. */
+  applyBlock(parts, meta = {}) {
+    if (parts.runs) this.runs = parts.runs;
+    if (parts.stockId) {
+      this.stockId = parts.stockId;
+      this.selectStock.value = this.stockId;
     }
+    if (parts.config) {
+      this.config = { ...this.config, ...parts.config };
+      this.populateDropdowns();
+    }
+    const tag = document.getElementById('block-tag');
+    if (tag && (meta.blockName || meta.title)) tag.textContent = meta.blockName || meta.title;
+    this.render();
   }
 
   saveBlock() {
-    const block = {
-      type: 'cable_labels',
-      stockId: this.stockId,
-      config: this.config,
-      runs: this.runs,
-      timestamp: new Date().toISOString(),
-    };
-    this.bridge.saveBlock(block, {
-      title: `Cable Labels (${this.runs.length} runs)`,
-      count: this.runs.length,
-    });
+    if (!this.host) return '';
+    const how = this.host.save(toBlock({ stockId: this.stockId, config: this.config, runs: this.runs }), blockMeta(this.runs));
+    const tag = document.getElementById('block-tag');
+    if (tag && how) tag.textContent = how === 'host' ? 'SAVED TO THE CAD' : 'DOWNLOADED .JSON';
+    return how;
   }
 
   getPages() {
@@ -318,8 +311,8 @@ export class CableWizardApp {
   renderTable() {
     if (!this.tableHost) return;
     cableTable(this.tableHost, this.runs, {
-      onEdit: () => { this.renderPreviewOnly(); this.bridge.notifyChanged(); },
-      onDelete: (i) => { this.runs.splice(i, 1); this.render(); this.bridge.notifyChanged(); },
+      onEdit: () => { this.renderPreviewOnly(); this.changed(); },
+      onDelete: (i) => { this.runs.splice(i, 1); this.render(); this.changed(); },
     });
   }
 
@@ -386,7 +379,7 @@ export class CableWizardApp {
       if (newRuns.length > 0) {
         this.runs = newRuns;
         this.render();
-        this.bridge.notifyChanged();
+        this.changed();
       }
     };
     reader.readAsText(file);

@@ -1,0 +1,4 @@
+{
+  "_about": "What the Discovered panel lists: things on the bus whose kinds (a protocol that saw them, the scanner's kind segment or their device_class) contain one of these words, case-insensitive; each can start a cable run. Tunables only: source holds no device list. Empty: everything on the bus.",
+  "kinds": []
+}
