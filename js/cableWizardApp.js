@@ -2,12 +2,34 @@
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
 import { connectCableHost, toBlock, blockMeta, fromBlock, normalizeRuns, runFromThing } from './cableHost.js';
-import { showDiscovered, loadDiscoveredConfig } from './discoveredPanel.js';
 import { cableTable } from './cableTable.js';
 import { LABEL_STOCKS, getStock, DEFAULT_STOCK_ID } from './labelStock.js';
 import { FIELD_TOKENS, ROW_PRESETS, DEFAULT_ROW_TEMPLATES } from './labelFields.js';
 import { layoutSheets } from './labelLayout.js';
 import { buildSheetSvg, makeCanvasMeasurer } from './labelSheetSvg.js';
+
+const S0 = () => (typeof window !== 'undefined' ? window.APKSoftapp : null);
+const normId = (id) => String(id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const CSV_FIELDS = ['wireNumber', 'source', 'sourceConnector', 'destination', 'destConnector', 'wireType', 'sourceRoom', 'destinationRoom', 'color'];
+
+/** Say a problem (APKSoftapp card), or fall back to alert when the SDK did not load. */
+function say(code, opts) {
+  const S = S0();
+  if (S && S.showProblem) S.showProblem(code, opts);
+  else if (typeof alert === 'function') alert(`${opts.subject ? opts.subject + ': ' : ''}${opts.detail || code}`);
+}
+
+/** Why a loaded block / file gives the labeller nothing to use ('' when it does). Names the field. */
+export function blockFault(parts, block) {
+  if (block == null) return '';
+  if (typeof block !== 'object') return `The block is ${typeof block}, not a cable_labels object.`;
+  const notes = [];
+  if (!parts.runs && !parts.stockId && !parts.config) notes.push('It has no runs[], cables[], stockId or config field, so nothing was loaded.');
+  if (parts.stockId && !LABEL_STOCKS.some((st) => normId(st.id) === normId(parts.stockId))) {
+    notes.push(`stockId "${parts.stockId}" is not a known label stock (${LABEL_STOCKS.map((st) => st.id).join(', ')}); ${getStock(parts.stockId).id} is used instead.`);
+  }
+  return notes.join(' ');
+}
 
 export class CableWizardApp {
   constructor() {
@@ -33,8 +55,33 @@ export class CableWizardApp {
     const S = window.APKSoftapp;
     this.host = S ? connectCableHost(S, {
       getState: () => ({ stockId: this.stockId, config: this.config, runs: this.runs }),
-      onLoad: (parts, meta) => this.applyBlock(parts, meta),
+      onLoad: (parts, meta, block) => this.applyBlock(parts, meta, block),
     }) : null;
+
+    if (S) S.describe({
+      name: 'Cable Label Wizard',
+      does: 'Lays cable runs out as printable wrap-around labels on a chosen label stock, both ends marked.',
+      inputs: [
+        { name: 'Cable block', from: 'the CAD (cable_labels block: runs[] or cables[], stockId, config)', kind: 'block' },
+        { name: 'Block .json', from: 'Open (a file saved by Save & Return, or any { cables: [...] } / [...] list)', kind: 'file' },
+        { name: 'Cable CSV', from: `Import CSV (header row with ${CSV_FIELDS.join(', ')})`, kind: 'file' },
+        { name: 'Discovered devices', from: 'the bus, via Discovered (kinds filter from config/discovered.json)', kind: 'bus', topic: 'Device/<kind>/<id>' },
+      ],
+      outputs: [
+        { name: 'Label sheets', to: "the browser's print dialog (Print)", kind: 'file' },
+        { name: 'Cable CSV', to: 'cable_labels_<date>.csv download (Export CSV)', kind: 'file' },
+        { name: 'Cable block', to: 'the CAD drawing (Save & Return), or cable_labels.json download when standalone', kind: 'block' },
+      ],
+      controls: [
+        { name: '1. Stock', how: 'Pick the label stock, the start offset (skip used labels) and the preview theme' },
+        { name: '2. Templates', how: 'Type the three label rows or pick a preset; click a {token} pill to insert it' },
+        { name: '3. Format', how: 'Both ends, end marker (A/B, src/dest, swap) and ALL CAPS' },
+        { name: 'Prev / Next Sheet, Print', how: 'Page through the preview and print it' },
+        { name: 'Cable table', how: '+ Add Cable, edit a cell, delete a row; Import / Export CSV' },
+        { name: 'Discovered / Open / Save & Return / ✕', how: 'Start a run from a bus device, open a .json, send back to the CAD, close' },
+      ],
+      problems: ['bad_json', 'bad_input', 'file_unreadable', 'config_invalid', 'save_failed'],
+    });
   }
 
   changed() {
@@ -238,12 +285,12 @@ export class CableWizardApp {
     panel.hidden = !panel.hidden;
     if (panel.hidden || panel.dataset.started) return;
     panel.dataset.started = '1';
-    const cfg = await loadDiscoveredConfig();
-    await showDiscovered(document.getElementById('discovered-table'), {
-      S: window.APKSoftapp, T: window.APKTable,
-      statusEl: document.getElementById('discovered-status'),
-      kinds: Array.isArray(cfg.kinds) ? cfg.kinds : [],
-      tableId: 'cable-labels-discovered',
+    // the Discovered panel is the shared client's (ROAD-3502): kinds in config/discovered.json
+    if (!window.APKSoftapp) return;
+    await window.APKSoftapp.discoveredPanel(document.getElementById('discovered-table'), {
+      status: document.getElementById('discovered-status'),
+      configUrl: './config/discovered.json',
+      id: 'cable-labels-discovered',
       pickLabel: 'New run from',
       onPick: (thing) => {
         this.runs.push(runFromThing(thing, this.runs.length + 1));
@@ -270,12 +317,15 @@ export class CableWizardApp {
   }
 
   handleBlockLoaded(block, meta) {
-    this.applyBlock(fromBlock(block), meta);
+    this.applyBlock(fromBlock(block), meta, block);
     this.changed();
   }
 
   /** Apply what a block sets (fromBlock): runs, stock, config. */
-  applyBlock(parts, meta = {}) {
+  applyBlock(parts, meta = {}, block = null) {
+    const fault = blockFault(parts, block);
+    if (fault) say('bad_input', { subject: meta.blockName || meta.title || 'CAD block', detail: fault,
+      fix: ['Open a cable_labels block (runs[], stockId, config) or a cable list ({ "cables": [...] }).'] });
     if (parts.runs) this.runs = parts.runs;
     if (parts.stockId) {
       this.stockId = parts.stockId;
@@ -291,8 +341,14 @@ export class CableWizardApp {
   }
 
   saveBlock() {
-    if (!this.host) return '';
-    const how = this.host.save(toBlock({ stockId: this.stockId, config: this.config, runs: this.runs }), blockMeta(this.runs));
+    if (!this.host) {
+      const tag = document.getElementById('block-tag');
+      if (tag) tag.textContent = 'NOT SAVED: SHARED CODE MISSING';
+      return '';
+    }
+    let how = '';
+    try { how = this.host.save(toBlock({ stockId: this.stockId, config: this.config, runs: this.runs }), blockMeta(this.runs)); }
+    catch (e) { say('save_failed', { subject: 'cable_labels', detail: e && e.message ? e.message : String(e), onRetry: () => this.saveBlock() }); return ''; }
     const tag = document.getElementById('block-tag');
     if (tag && how) tag.textContent = how === 'host' ? 'SAVED TO THE CAD' : 'DOWNLOADED .JSON';
     return how;
@@ -361,12 +417,23 @@ export class CableWizardApp {
   importCsv(event) {
     const file = event.target.files[0];
     if (!file) return;
+    event.target.value = '';   // the same file can be picked again after a fix
+    const retry = () => this.fileImportCsv?.click();
+    const fix = [`Give the CSV a header row naming its columns (${CSV_FIELDS.join(', ')}), one cable per line below it. Export CSV writes one to start from.`];
     const reader = new FileReader();
+    reader.onerror = () => say('file_unreadable', { subject: file.name, detail: reader.error ? reader.error.message : 'The browser could not read the file.', onRetry: retry });
     reader.onload = (e) => {
       const text = e.target.result;
       const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-      if (lines.length < 2) return;
+      if (lines.length < 2) {
+        say('bad_input', { subject: file.name, detail: lines.length ? 'The CSV has a header row but no cable rows; nothing was imported.' : 'The file is empty; nothing was imported.', fix, onRetry: retry });
+        return;
+      }
       const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      if (!headers.some((h) => CSV_FIELDS.includes(h))) {
+        say('bad_input', { subject: file.name, detail: `Header row "${lines[0].slice(0, 120)}" names none of the label fields, so every label would be blank; nothing was imported.`, fix, onRetry: retry });
+        return;
+      }
       const newRuns = [];
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
@@ -392,14 +459,19 @@ export class CableWizardApp {
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      const retry = () => this.promptOpen();
       const reader = new FileReader();
+      reader.onerror = () => say('file_unreadable', { subject: file.name, detail: reader.error ? reader.error.message : 'The browser could not read the file.', onRetry: retry });
       reader.onload = (re) => {
+        let parsed;
         try {
-          const parsed = JSON.parse(re.target.result);
-          this.handleBlockLoaded(parsed, { title: file.name });
+          parsed = JSON.parse(re.target.result);
         } catch (err) {
-          alert('Invalid JSON block file');
+          say('bad_json', { subject: file.name, detail: `${file.name} is not valid JSON: ${err.message}`, onRetry: retry,
+            fix: ['Pick a cable_labels .json saved by Save & Return, or a { "cables": [...] } list.'] });
+          return;
         }
+        this.handleBlockLoaded(parsed, { title: file.name });
       };
       reader.readAsText(file);
     };

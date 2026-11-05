@@ -28,14 +28,22 @@ export function thingRow(t) {
   };
 }
 
-/** The app's discovery tunables (config/discovered.json), or {} when the file is not served. */
-export async function loadDiscoveredConfig(url = './config/discovered.json') {
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    return r.ok ? await r.json() : {};
-  } catch (_) {
+/** The app's discovery tunables (config/discovered.json), or {} when the file is not
+    served. A file that is there but is not JSON, or whose kinds is not a list, is
+    said (config_invalid, naming the file and field) and the panel lists everything. */
+export async function loadDiscoveredConfig(url = './config/discovered.json', S = globalThis.APKSoftapp) {
+  const bad = (detail) => {
+    if (S && S.showProblem) S.showProblem('config_invalid', { subject: url, detail, fix: [`Fix ${url} (JSON with "kinds": ["word", …]); the Discovered panel lists everything until then.`] });
     return {};
-  }
+  };
+  let r;
+  try { r = await fetch(url, { cache: 'no-store' }); } catch (_) { return {}; }
+  if (!r.ok) return {};
+  let cfg;
+  try { cfg = await r.json(); } catch (e) { return bad(`${url} is not valid JSON (${e && e.message ? e.message : e}).`); }
+  if (!cfg || typeof cfg !== 'object') return bad(`${url} holds ${JSON.stringify(cfg)}, not an object.`);
+  if (cfg.kinds !== undefined && !Array.isArray(cfg.kinds)) return bad(`Field "kinds" in ${url} is ${typeof cfg.kinds}, not a list of words.`);
+  return cfg;
 }
 
 function stateBadge(doc, row) {
@@ -97,7 +105,10 @@ export async function showDiscovered(host, opts) {
   };
   say('Asking the bus…', 'kinda');
   const d = await S.discovered({ kinds, onChange: draw });
-  if (!d.ok) say(d.reason, 'dead');
-  else draw(d.things());
+  if (!d.ok) {
+    say(d.reason, 'dead');
+    // what happened / why / do this, with Retry that asks the bus again
+    if (d.problem && S.showProblem) S.showProblem(d.problem, { subject: 'Discovered panel', onRetry: () => showDiscovered(host, opts) });
+  } else draw(d.things());
   return d;
 }

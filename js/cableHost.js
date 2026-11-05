@@ -64,7 +64,7 @@ export function runFromThing(thing, n) {
 }
 
 /**
- * getState() → { stockId, config, runs }; onLoad(parts, meta) applies fromBlock(block).
+ * getState() → { stockId, config, runs }; onLoad(parts, meta, block) applies fromBlock(block).
  * Returns the APKSoftapp host handle.
  */
 export function connectCableHost(S, { getState, onLoad, notice } = {}) {
@@ -73,7 +73,7 @@ export function connectCableHost(S, { getState, onLoad, notice } = {}) {
     blockType: BLOCK_TYPE,
     block: toBlock(getState()),
     notice,
-    onLoad: (block, meta) => { if (onLoad) onLoad(fromBlock(block), meta); },
+    onLoad: (block, meta) => { if (onLoad) onLoad(fromBlock(block), meta, block); },
     onRequest: () => {
       const st = getState();
       return { block: toBlock(st), meta: blockMeta(st.runs) };
