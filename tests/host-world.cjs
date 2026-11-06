@@ -35,7 +35,7 @@ function world({ framed = true } = {}) {
         createElement: (tag) => ({
             tag, style: {}, attrs: {}, textContent: '',
             setAttribute(k, v) { this.attrs[k] = v; },
-            click() { downloads.push({ name: this.download, href: this.href }); },
+            click() { downloads.push({ name: this.download, href: this.href, text: downloads.blob && downloads.blob.text }); },
             remove() {},
         }),
     };

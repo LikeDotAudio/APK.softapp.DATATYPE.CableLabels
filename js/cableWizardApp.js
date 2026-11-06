@@ -7,6 +7,7 @@ import { LABEL_STOCKS, getStock, DEFAULT_STOCK_ID } from './labelStock.js';
 import { FIELD_TOKENS, ROW_PRESETS, DEFAULT_ROW_TEMPLATES } from './labelFields.js';
 import { layoutSheets } from './labelLayout.js';
 import { buildSheetSvg, makeCanvasMeasurer } from './labelSheetSvg.js';
+import { cablesToIfc, cablesFromIfc } from './cableIfc.js';
 
 const S0 = () => (typeof window !== 'undefined' ? window.APKSoftapp : null);
 const normId = (id) => String(id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -64,13 +65,14 @@ export class CableWizardApp {
       inputs: [
         { name: 'Cable block', from: 'the CAD (cable_labels block: runs[] or cables[], stockId, config)', kind: 'block' },
         { name: 'Block .json', from: 'Open (a file saved by Save & Return, or any { cables: [...] } / [...] list)', kind: 'file' },
+        { name: 'Cable model .ifc', from: 'Open (IFC4X3: each IfcCableSegment is a run, its ends the ports it joins)', kind: 'file' },
         { name: 'Cable CSV', from: `Import CSV (header row with ${CSV_FIELDS.join(', ')})`, kind: 'file' },
         { name: 'Discovered devices', from: 'the bus, via Discovered (kinds filter from config/discovered.json)', kind: 'bus', topic: 'Device/<kind>/<id>' },
       ],
       outputs: [
         { name: 'Label sheets', to: "the browser's print dialog (Print)", kind: 'file' },
         { name: 'Cable CSV', to: 'cable_labels_<date>.csv download (Export CSV)', kind: 'file' },
-        { name: 'Cable block', to: 'the CAD drawing (Save & Return), or cable_labels.json download when standalone', kind: 'block' },
+        { name: 'Cable block', to: 'the CAD drawing (Save & Return), or standalone Save Model: cable_labels.json + its cable_labels.ifc twin (the cables as IfcCableSegment)', kind: 'block' },
       ],
       controls: [
         { name: '1. Stock', how: 'Pick the label stock, the start offset (skip used labels) and the preview theme' },
@@ -340,17 +342,31 @@ export class CableWizardApp {
     this.render();
   }
 
-  saveBlock() {
+  /** Save: into the drawing inside the CAD. Standalone: the block and its .ifc twin (the cables), both or
+      neither (APKSoftapp.saveModel). Returns 'host' | 'download' | 'directory' | '' (nothing saved). */
+  async saveBlock() {
     if (!this.host) {
       const tag = document.getElementById('block-tag');
       if (tag) tag.textContent = 'NOT SAVED: SHARED CODE MISSING';
       return '';
     }
+    const block = toBlock({ stockId: this.stockId, config: this.config, runs: this.runs });
+    const meta = blockMeta(this.runs);
+    const S = S0();
     let how = '';
-    try { how = this.host.save(toBlock({ stockId: this.stockId, config: this.config, runs: this.runs }), blockMeta(this.runs)); }
-    catch (e) { say('save_failed', { subject: 'cable_labels', detail: e && e.message ? e.message : String(e), onRetry: () => this.saveBlock() }); return ''; }
+    if (this.host.embedded || !S || typeof S.saveModel !== 'function') {
+      try { how = this.host.save(block, meta); }
+      catch (e) { say('save_failed', { subject: 'cable_labels', detail: e && e.message ? e.message : String(e), onRetry: () => this.saveBlock() }); return ''; }
+    } else {
+      const r = await S.saveModel(block, { name: meta.filename, toIfc: (b) => cablesToIfc(b, { name: meta.filename }) });
+      if (!r.ok) {
+        if (!r.cancelled) S.showProblem(r.problem || 'save_failed', { onRetry: () => this.saveBlock() });
+        return '';
+      }
+      how = r.via;
+    }
     const tag = document.getElementById('block-tag');
-    if (tag && how) tag.textContent = how === 'host' ? 'SAVED TO THE CAD' : 'DOWNLOADED .JSON';
+    if (tag && how) tag.textContent = how === 'host' ? 'SAVED TO THE CAD' : `SAVED ${meta.filename.toUpperCase()}.IFC + .JSON`;
     return how;
   }
 
@@ -452,7 +468,34 @@ export class CableWizardApp {
     reader.readAsText(file);
   }
 
-  promptOpen() {
+  /** An IFC model's cables (cableIfc.js) as the runs; the label sheet stays as it is. */
+  loadIfc(stepText, name) {
+    let parts;
+    try { parts = cablesFromIfc(stepText); }
+    catch (err) {
+      say('bad_input', { subject: name, detail: err.message, onRetry: () => this.promptOpen(),
+        fix: ['Open an .ifc saved by this wizard (or the Wirelist, or a bench): it needs IfcCableSegment cables.'] });
+      return false;
+    }
+    this.applyBlock(parts, { title: name });
+    this.changed();
+    return true;
+  }
+
+  /** Open a cable_labels .json, a { cables: [...] } list, or an IFC model (.ifc: its cables). */
+  async promptOpen() {
+    const S = S0();
+    if (S && typeof S.openModel === 'function') {
+      const r = await S.openModel({});
+      if (!r.ok) {
+        if (!r.cancelled) S.showProblem(r.problem, { onRetry: () => this.promptOpen(),
+          fix: ['Pick a cable_labels .json saved by Save, a { "cables": [...] } list, or an .ifc with IfcCableSegment cables.'] });
+        return;
+      }
+      if (r.kind === 'ifc') this.loadIfc(r.text, r.name);
+      else this.handleBlockLoaded(r.model, { title: r.name });
+      return;
+    }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
